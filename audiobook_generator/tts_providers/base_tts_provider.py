@@ -6,6 +6,7 @@ TTS_AZURE = "azure"
 TTS_OPENAI = "openai"
 TTS_EDGE = "edge"
 TTS_STYLE = "style_tts2"
+TTS_STYLE_LOCAL = "style_tts2_local"
 
 
 class BaseTTSProvider:  # Base interface for TTS providers
@@ -36,7 +37,7 @@ class BaseTTSProvider:  # Base interface for TTS providers
 # Common support methods for all TTS providers
 def get_supported_tts_providers() -> List[str]:
     #setting TTS style as the defualt (start of the list)
-    return [TTS_STYLE  , TTS_AZURE, TTS_OPENAI, TTS_EDGE]
+    return [TTS_STYLE_LOCAL,TTS_STYLE  , TTS_AZURE, TTS_OPENAI, TTS_EDGE]
 
 
 def get_tts_provider(config) -> BaseTTSProvider:
@@ -52,5 +53,8 @@ def get_tts_provider(config) -> BaseTTSProvider:
     elif config.tts == TTS_STYLE:
         from audiobook_generator.tts_providers.style_tts2_provider import StyleTTS2sProvider
         return StyleTTS2sProvider(config)
+    elif config.tts == TTS_STYLE_LOCAL:
+        from audiobook_generator.tts_providers.style_tts2_local import StyleTTS2Local
+        return StyleTTS2Local(config)
     else:
         raise ValueError(f"Invalid TTS provider: {config.tts}")

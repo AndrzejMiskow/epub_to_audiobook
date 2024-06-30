@@ -33,3 +33,4 @@ private_examples/
 scripts/
 /audiobooks
 /examples
+/audiobook_generator/utils/style_tts2

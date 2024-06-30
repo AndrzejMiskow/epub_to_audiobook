@@ -23,7 +23,7 @@ def handle_args():
         "--tts",
         choices=get_supported_tts_providers(),
         default=get_supported_tts_providers()[0],
-        help="Choose TTS provider (default: Style TTS 2). azure: Azure Cognitive Services, openai: OpenAI TTS API. When using azure, environment variables MS_TTS_KEY and MS_TTS_REGION must be set. When using openai, environment variable OPENAI_API_KEY must be set.",
+        help="Choose TTS provider (default: Style TTS 2 Local). azure: Azure Cognitive Services, openai: OpenAI TTS API. When using azure, environment variables MS_TTS_KEY and MS_TTS_REGION must be set. When using openai, environment variable OPENAI_API_KEY must be set.",
     )
     parser.add_argument(
         "--log",
@@ -132,6 +132,15 @@ def handle_args():
         default="1250",
         help="Break duration in milliseconds for the different paragraphs or sections (default: 1250, means 1.25 s). Valid values range from 0 to 5000 milliseconds for Azure TTS.",
     )
+
+    style_tts_2 = parser.add_argument_group(title="stlye tts 2 specific")
+    style_tts_2.add_argument(
+        "--diffusion_steps",
+        default=10,
+        type=int,
+        help="Number of diffusion steps for the Style TTS 2 model (default: 10)",
+    )
+
 
     args = parser.parse_args()
     return GeneralConfig(args)
