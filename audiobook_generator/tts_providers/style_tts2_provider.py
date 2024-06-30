@@ -3,10 +3,10 @@ import logging
 import math
 import io
 
-import edge_tts
-from edge_tts import list_voices
+from styletts2 import tts
 from typing import Union
 from pydub import AudioSegment
+import soundfile as sf
 
 from audiobook_generator.config.general_config import GeneralConfig
 from audiobook_generator.core.audio_tags import AudioTags
@@ -16,41 +16,29 @@ from audiobook_generator.tts_providers.base_tts_provider import BaseTTSProvider
 logger = logging.getLogger(__name__)
 
 
-async def get_supported_voices():
-    # List all available voices and their attributes.
-    # This pulls data from the URL used by Microsoft Edge to return a list of
-    # all available voices.
-    # Returns:
-    #     dict: A dictionary of voice attributes.
-    voices = await list_voices()
-    voices = sorted(voices, key=lambda voice: voice["ShortName"])
-
-    result = {}
-
-    for voice in voices:
-        result[voice["ShortName"]] = voice["Locale"]
-
-    return result
-
 
 # Credit: https://gist.github.com/moha-abdi/8ddbcb206c38f592c65ada1e5479f2bf
 # @phuchoang2603 contributed pause support in https://github.com/p0n1/epub_to_audiobook/pull/45
 class CommWithPauses:
-    # This class uses edge_tts to generate text
+    # This class uses Style TTS 2 to generate text
     # but with pauses for example:- text: 'Hello
     # this is simple text. [pause: 1000] Paused 1000ms'
     def __init__(
         self,
         text: str,
-        voice_name: str,
         break_string: str,
         break_duration: int = 1250,
+        tts_model: tts.StyleTTS2 = None,
         **kwargs,
     ) -> None:
         self.full_text = text
-        self.voice_name = voice_name
         self.break_string = break_string
         self.break_duration = int(break_duration)
+
+        if tts_model is None:
+            raise ValueError("No TTS model provided")
+        
+        self.tts_model = tts_model
 
         self.parsed = self.parse_text()
         self.file = io.BytesIO()
@@ -71,9 +59,7 @@ class CommWithPauses:
         logger.debug(f"Chunkifying the text")
         for content in self.parsed:
             logger.debug(f"content from parsed: <{content}>")
-            
             audio_bytes = await self.generate_audio(content)
-
             self.file.write(audio_bytes)
             if content != self.parsed[-1] and self.break_duration > 0:
                 # only same break duration for all breaks is supported now
@@ -89,25 +75,28 @@ class CommWithPauses:
 
     async def generate_audio(self, text: str) -> bytes:
         logger.debug(f"Generating audio for: <{text}>")
-        # this genertes the real TTS using edge_tts for this part.
-        temp_chunk = io.BytesIO()
-        communicate = edge_tts.Communicate(text, self.voice_name)
-        async for chunk in communicate.stream():
-            if chunk["type"] == "audio":
-                temp_chunk.write(chunk["data"])
 
-        temp_chunk.seek(0)
-        # handle the case where the chunk is empty
+        # Generate audio data as a NumPy array from the TTS model
+        audio_data = self.tts_model.inference(text=text , output_sample_rate=24000,
+                                              diffusion_steps=20)  
+        logger.debug("Generated audio data as a NumPy array")
+
+        # Convert the NumPy array to a WAV format in memory
+        temp_wav = io.BytesIO()
+        sf.write(temp_wav, audio_data, 24000, format='WAV')
+        temp_wav.seek(0)
+        
+        # Load the WAV data into pydub's AudioSegment
         try:
-            logger.debug(f"Decoding the chunk")
-            decoded_chunk = AudioSegment.from_mp3(temp_chunk)
+            logger.debug("Decoding the WAV data")
+            audio_segment = AudioSegment.from_file(temp_wav, format='wav')
         except Exception as e:
-            logger.warning(
-                f"Failed to decode the chunk, reason: {e}, returning a silent chunk."
-            )
-            decoded_chunk = AudioSegment.silent(0, 24000)
-        logger.debug(f"Returning the decoded chunk")
-        return decoded_chunk.raw_data  # type: ignore
+            logger.warning(f"Failed to decode the WAV data, reason: {e}, returning a silent chunk.")
+            audio_segment = AudioSegment.silent(duration=1000, frame_rate=24000)
+        
+        logger.debug("Returning the decoded audio segment raw data")
+
+        return audio_segment.raw_data
 
     async def save(
         self,
@@ -124,32 +113,36 @@ class CommWithPauses:
         logger.info(f"Saved the audio to: {audio_fname}")
 
 
-class EdgeTTSProvider(BaseTTSProvider):
+class StyleTTS2sProvider(BaseTTSProvider):
     def __init__(self, config: GeneralConfig):
         logger.setLevel(config.log)
         # TTS provider specific config
-        config.voice_name = config.voice_name or "en-US-GuyNeural"
         config.output_format = config.output_format or "audio-24khz-48kbitrate-mono-mp3"
-        config.voice_rate = config.voice_rate or "+0%"
-        config.voice_volume = config.voice_volume or "+0%"
-        config.voice_pitch = config.voice_pitch or "+0Hz"
         config.proxy = config.proxy or None
+
+        # Have params to the the voice if wanted for now leave blank
 
         # 0.000$ per 1 million characters
         # or 0.000$ per 1000 characters
         self.price = 0.000
+        
+        # Initilise the TTS model 
+        self.style_tts = self.initlise_style_tts2()
+
         super().__init__(config)
+        
+
+
+    def initlise_style_tts2(self):
+        my_tts = tts.StyleTTS2()
+        return my_tts
 
     def __str__(self) -> str:
         return f"{self.config}"
 
     def validate_config(self):
-        supported_voices = asyncio.run(get_supported_voices())
-        # logger.debug(f"Supported voices: {supported_voices}")
-        if self.config.voice_name not in supported_voices:
-            raise ValueError(
-                f"EdgeTTS: Unsupported voice name: {self.config.voice_name}"
-            )
+        # No validation needed for now
+        return None
 
     def text_to_speech(
         self,
@@ -160,13 +153,9 @@ class EdgeTTSProvider(BaseTTSProvider):
 
         communicate = CommWithPauses(
             text=text,
-            voice_name=self.config.voice_name,
             break_string=self.get_break_string().strip(),
             break_duration=int(self.config.break_duration),
-            rate=self.config.voice_rate,
-            volume=self.config.voice_volume,
-            pitch=self.config.voice_pitch,
-            proxy=self.config.proxy,
+            tts_model = self.style_tts
         )
 
         asyncio.run(communicate.save(output_file))
