@@ -1,10 +1,23 @@
-# EPUB to Audiobook Converter [![Discord](https://img.shields.io/discord/1177631634724491385?label=Discord&logo=discord&logoColor=white)](https://discord.com/invite/pgp2G8zhS7)
+# EPUB to Audiobook Converter 
+
+Forked from EPUB to Audiobook Converter repository in order to add support for open source TTS models.
+
+Current To do List:
+- [x] Add Support for Style TTS 2
+   - [x] Support for LJSpeech Model
+   - [ ] Support for Multi-Voice Model
+   - [ ] Support for Voice_Cloning Model
+   - [ ] Easy way to change the params of the Model
+   - [ ] Fix Voice Model issues:
+      - [ ] Prgoram does not read out "Class A" correctly however it works well for "Class B"
+      - [ ] For Japanese style names they are read out incorrectly and sound strange (Find a way to fix this)
+      - [ ] Read out of Numbers is also strange (30 000) being read out as "Thirty zero zero zero" 
+- [ ] Fix Title managment (Curerntly the program can detect them however there isn't a pause from chapter title to main text)
+
 
 *Join our [Discord](https://discord.com/invite/pgp2G8zhS7) server for any questions or discussions.*
 
 This project provides a command-line tool to convert EPUB ebooks into audiobooks. It now supports both the [Microsoft Azure Text-to-Speech API](https://learn.microsoft.com/en-us/azure/cognitive-services/speech-service/rest-text-to-speech) (alternativly [EdgeTTS](https://github.com/rany2/edge-tts)) and the [OpenAI Text-to-Speech API](https://platform.openai.com/docs/guides/text-to-speech) to generate the audio for each chapter in the ebook. The output audio files are optimized for use with [Audiobookshelf](https://github.com/advplyr/audiobookshelf).
-
-*This project is developed with the help of ChatGPT.*
 
 ## Audio Sample
 
