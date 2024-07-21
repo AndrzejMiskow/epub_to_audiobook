@@ -44,6 +44,8 @@ class StyleTTS2Local(BaseTTSProvider):
         config.output_format = config.output_format or "wav"
         config.diffusion_steps = config.diffusion_steps or 10
 
+
+        self.config = config    
     
         # Free as we are porcessing the model locally
         self.price = 0.000
@@ -81,7 +83,37 @@ class StyleTTS2Local(BaseTTSProvider):
                                                      embedding_scale=1)
                 audio_segments.append(audio)
                 logger.debug(f"Generated audio segment {i}")
+        
+        if self.config.model_name == "Multi-Voice":
+            texts = txtsplit(text)
+            for i, chunk in enumerate(texts, 1):
+                noise = torch.randn(1,1,256).to(device)
 
+                logger.debug(
+                    f"Processing chunk {i} of {len(texts)}, length={len(chunk)}, text=[{chunk}]"
+                )
+                logger.info(
+                    f"Processing chapter-{audio_tags.idx} <{audio_tags.title}>, chunk {i} of {len(texts)}"
+                )
+
+                logger.debug(f"Text: [{chunk}], length={len(chunk)}")
+                
+                set_voice = self.config.voice_name.lower()
+
+                supported_voices = get_supported_voices()
+                voices = {}
+
+                # Load the list of voices
+                for v in supported_voices:
+                    voices[v] = styletts2importable.compute_style(f'style_tts2/voices/{v}.wav')
+                    logger.debug(f"Loaded voice {v}")
+
+
+                audio_segments.append(styletts2importable.inference(chunk, voices[set_voice], alpha=0.3, beta=0.7, 
+                                                                    diffusion_steps=self.config.diffusion_steps, 
+                                                                    embedding_scale=1)
+)
+                logger.debug(f"Generated audio segment {i}")
         else:
             texts = txtsplit(text)
             for i, chunk in enumerate(texts, 1):

@@ -5,13 +5,14 @@ Forked from EPUB to Audiobook Converter repository in order to add support for o
 Current To do List:
 - [x] Add Support for Style TTS 2
    - [x] Support for LJSpeech Model
-   - [ ] Support for Multi-Voice Model
-   - [ ] Support for Voice_Cloning Model
-   - [ ] Easy way to change the params of the Model
+   - [x] Support for Multi-Voice Model
+   - [x] Easy way to change the params of the Model
    - [ ] Fix Voice Model issues:
+      - [ ] Have an abilit to classify chunks of text and identify classes of words such as Names , Numbers etc.. 
       - [ ] Prgoram does not read out "Class A" correctly however it works well for "Class B"
       - [ ] For Japanese style names they are read out incorrectly and sound strange (Find a way to fix this)
       - [ ] Read out of Numbers is also strange (30 000) being read out as "Thirty zero zero zero" 
+   - [ ] Support for Voice_Cloning Model
 - [ ] Fix Title managment (Curerntly the program can detect them however there isn't a pause from chapter title to main text)
 
 
